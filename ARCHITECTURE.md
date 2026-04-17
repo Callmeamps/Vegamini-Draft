@@ -35,9 +35,18 @@ vega_mini/
 │   └── consolidate.py # replay + prune + merge
 ├── eval/
 │   └── quality.py # Q_φ score
+├── logging/
+│   └── events.py # Structured JSONL/CSV logging
+├── vis/
+│   └── dashboard.py # Plotly visualization tools
 ├── run.py # day loop: swarm + STV + write
-└── sleep.py # night loop
+└── sleep.py # night loop orchestrator
 ```
+
+## Layer 4: Observability
+- **Event Logs**: JSONL file with timestamped system events.
+- **Metrics**: CSV for numeric time-series tracking (quality, margins).
+- **Visualization**: Interactive PCA scatter plots for latent space analysis.
 
 ## Core Contracts
 

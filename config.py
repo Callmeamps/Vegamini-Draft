@@ -8,6 +8,8 @@ DATA_DIR = os.path.join(os.path.dirname(__file__), 'vega_mini', 'data')
 LIGHTHOUSE_DB_PATH = os.path.join(DATA_DIR, 'lighthouses.db')
 FAISS_INDEX_PATH = os.path.join(DATA_DIR, 'lighthouse_index.faiss')
 QUALITY_MODEL_PATH = os.path.join(DATA_DIR, 'quality_model.pt')
+LOG_DIR = os.path.join(os.path.dirname(__file__), 'logs')
+VIS_DIR = os.path.join(os.path.dirname(__file__), 'visualizations')
 
 # Model and flow parameters
 MODEL_DIM = 1024
@@ -32,8 +34,13 @@ QUALITY_VOCAB_SIZE = 10000
 
 # Sleep cycle
 SLEEP_REPLAY_K = 2000
-SLEEP_DREAMS = 500
-SLEEP_NIGHTMARES = 200
+SLEEP_DREAMS = 50
+SLEEP_NIGHTMARES = 20
+
+# Logging and visualization
+LOGGING_ENABLED = True
+VISUALIZATION_ENABLED = True
+VIS_PERIOD = 10  # Visualize every 10 steps
 
 # Misc
 SEED = 42

@@ -1,4 +1,12 @@
+"""
+Initialization script for the Vega Mini database and vector index.
 
+This script creates the initial SQLite database for lighthouse metadata 
+and an empty FAISS index for vector storage.
+
+Usage:
+    python init_db.py
+"""
 import sqlite3
 import faiss
 import numpy as np
@@ -8,7 +16,19 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import config
 
 def init_database():
-    """Initialize SQLite database and FAISS index for lighthouses."""
+    """
+    Initialize SQLite database and FAISS index for lighthouses.
+    
+    Creates the 'lighthouses' table with columns for:
+    - id: Primary key
+    - vec: Latent vector BLOB
+    - b: Brightness (importance)
+    - q: Quality at birth
+    - y_context: String identifier for the answer context
+    - task_id: Identifier for the task domain
+    - birth: Timestamp of creation
+    - last_reinforce: Timestamp of the last reinforcement event
+    """
     
     # Create directories
     os.makedirs(os.path.dirname(config.LIGHTHOUSE_DB_PATH), exist_ok=True)
