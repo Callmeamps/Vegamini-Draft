@@ -1,0 +1,7 @@
+[
+    {"input": "What is 2 + 2?"},
+    {"input": "Solve the puzzle: [1, 2, _, 4]"},
+    {"input": "Complete the pattern: A B A B _"},
+    {"input": "What comes next: 1, 1, 2, 3, 5, _"},
+    {"input": "If all roses are red and this is a rose, what color is it?"}
+]

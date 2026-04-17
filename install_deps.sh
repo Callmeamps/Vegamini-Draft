@@ -1,0 +1,1 @@
+pip install torch>=2.2 faiss-cpu einops numpy scikit-learn tqdm
