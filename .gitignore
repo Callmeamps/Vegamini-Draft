@@ -205,3 +205,18 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Vega Mini project-specific
+vega_mini/data/
+logs/
+visualizations/
+*.db
+*.faiss
+*.pth
+*.pt
+
+# Gemini
+.gemini/
+
+# VS Code Server
+.vscode-server/

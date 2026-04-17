@@ -4,3 +4,6 @@ einops
 numpy
 scikit-learn
 tqdm
+matplotlib
+plotly
+pandas
