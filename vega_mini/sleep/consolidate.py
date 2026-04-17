@@ -39,3 +39,45 @@ def consolidate_cycle(memory: LighthouseMemory, flow_solver: FlowSolver, velocit
     })
     
     return survived
+
+def prune_storage_keep_portfolio(cfg):
+    import sqlite3, json
+    from pathlib import Path
+    portfolio = json.loads(Path('portfolio.json').read_text()) if Path('portfolio.json').exists() else []
+    # cell_id is from the current run config
+    keep_ids = set(portfolio + [cfg.get('cell_id', 'none')])
+
+    # Path to database - assuming it's in memory/db_iter{cfg['iteration']}.sqlite as per playbook
+    # but the LighthouseMemory default is vega_mini/data/lighthouses.db.
+    # I'll stick to the playbook's intended structure for DOE.
+    db_path = Path(f"memory/db_iter{cfg.get('iteration', 0)}.sqlite")
+    if not db_path.exists():
+        # Fallback to default if it doesn't exist
+        db_path = Path("vega_mini/data/lighthouses.db")
+    
+    if not db_path.exists():
+        return
+
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+    
+    # Keep portfolio + top 5k by b*q
+    # Note: the playbook uses a simplified SQL. I'll make it more robust.
+    placeholders = ','.join(['?'] * len(keep_ids))
+    cur.execute(f"""
+        DELETE FROM lighthouses
+        WHERE cell_id NOT IN ({placeholders})
+        AND id NOT IN (SELECT id FROM lighthouses ORDER BY b*q DESC LIMIT 5000)
+    """, list(keep_ids))
+    
+    cur.execute("DELETE FROM lighthouses WHERE b < 0.05")
+    conn.commit()
+    cur.execute("VACUUM")
+    conn.close()
+
+    # Checkpoints: keep only portfolio
+    checkpoint_dir = Path("checkpoints")
+    if checkpoint_dir.exists():
+        for p in checkpoint_dir.glob("*.pt"):
+            if not any(kid in p.name for kid in keep_ids if kid != 'none'):
+                p.unlink()

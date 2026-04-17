@@ -39,7 +39,7 @@ class LighthouseMemory:
         return sqlite3.connect(self.db_path)
 
     def drop_lighthouse(self, vec: torch.Tensor, b: float, q: float, 
-                       y_context: str, task_id: str) -> int:
+                       y_context: str, task_id: str, cell_id: str = 'none') -> int:
         """
         Persists a new lighthouse vector into memory.
 
@@ -49,27 +49,35 @@ class LighthouseMemory:
             q (float): Quality score at birth.
             y_context (str): Contextual identifier (e.g., hash of the answer).
             task_id (str): Identifier for the task domain.
+            cell_id (str): Experiment cell identifier.
 
         Returns:
             int: The unique database ID of the new lighthouse.
         """
-        vec_bytes = vec.cpu().numpy().astype(np.float32).tobytes()
+        vec_bytes = vec.detach().cpu().numpy().astype(np.float32).tobytes()
         birth_time = time.time()
 
         conn = self.get_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
-            INSERT INTO lighthouses (vec, b, q, y_context, task_id, birth, last_reinforce)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (vec_bytes, b, q, y_context, task_id, birth_time, birth_time))
+            INSERT INTO lighthouses (vec, b, q, y_context, task_id, cell_id, birth, last_reinforce)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (vec_bytes, b, q, y_context, task_id, cell_id, birth_time, birth_time))
 
         lighthouse_id = cursor.lastrowid
         conn.commit()
         conn.close()
 
         # Add to FAISS index
-        vec_np = vec.cpu().numpy().astype(np.float32).reshape(1, -1)
+        vec_np = vec.detach().cpu().numpy().astype(np.float32).reshape(1, -1)
+        dim = vec_np.shape[1]
+        if self.index.ntotal > 0 and self.index.d != dim:
+             # Dimension mismatch, need to rebuild or reset
+             self.index = faiss.IndexFlatL2(dim)
+        elif self.index.ntotal == 0 and self.index.d != dim:
+             self.index = faiss.IndexFlatL2(dim)
+             
         self.index.add(vec_np)
         faiss.write_index(self.index, self.index_path)
 
@@ -135,11 +143,14 @@ class LighthouseMemory:
             delta_b (float): Amount to increase brightness.
             radius (float): Distance threshold for reinforcement.
         """
-        traj_np = trajectory.cpu().numpy().astype(np.float32)
+        traj_np = trajectory.detach().cpu().numpy().astype(np.float32)
 
         # Find nearby lighthouses using FAISS
         if len(traj_np.shape) == 1:
             traj_np = traj_np.reshape(1, -1)
+
+        if self.index.ntotal == 0:
+            return 0
 
         distances, indices = self.index.search(traj_np, k=min(100, self.index.ntotal))
 
@@ -288,11 +299,13 @@ class LighthouseMemory:
         rows = cursor.fetchall()
         conn.close()
 
-        # Create new index
-        self.index = faiss.IndexFlatL2(1024)
-
         if rows:
             vecs = np.array([np.frombuffer(row[0], dtype=np.float32) for row in rows])
+            dim = vecs.shape[1]
+            self.index = faiss.IndexFlatL2(dim)
             self.index.add(vecs.astype(np.float32))
+        else:
+            # Fallback to default dim or keep existing if empty
+            pass
 
         faiss.write_index(self.index, self.index_path)

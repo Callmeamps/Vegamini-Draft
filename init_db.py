@@ -45,6 +45,7 @@ def init_database():
             q REAL,
             y_context TEXT,
             task_id TEXT,
+            cell_id TEXT,
             birth REAL,
             last_reinforce REAL
         )

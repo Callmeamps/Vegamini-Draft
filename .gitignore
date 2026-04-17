@@ -186,7 +186,7 @@ cython_debug/
 #  that can be found at https://github.com/github/gitignore/blob/main/Global/VisualStudioCode.gitignore
 #  and can be added to the global gitignore or merged into this file. However, if you prefer, 
 #  you could uncomment the following to ignore the entire vscode folder
-# .vscode/
+.vscode/
 
 # Ruff stuff:
 .ruff_cache/
@@ -207,16 +207,25 @@ marimo/_lsp/
 __marimo__/
 
 # Vega Mini project-specific
-vega_mini/data/
+vega_mini/data/*
 logs/
 visualizations/
 *.db
 *.faiss
 *.pth
 *.pt
+configs/cell_*
 
 # Gemini
 .gemini/
 
 # VS Code Server
 .vscode-server/
+
+# Lightning Studio
+.lightning_studio/
+.idea/
+*-server
+
+# Copilot
+.copilot/

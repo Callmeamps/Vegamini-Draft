@@ -1,7 +1,5 @@
 # VegaMini v0.1 Architecture
 
-[Moved from README.md]
-
 ---
 
 ## Layer 0: Input Anchors

@@ -15,13 +15,36 @@ from vega_mini.vis.dashboard import dashboard
 
 
 class VegaMiniRunner:
-    def __init__(self, model_dim=1024):
+    def __init__(self, config=None):
+        # Default config
+        self.config = {
+            'model_dim': 1024,
+            'swarm_size': 32,
+            'quality_gate': 0.8,
+            'stv_margin': 0.1,
+            'seed': 42,
+            'arch': 'trm_7m',
+            'drop_k': 64,
+        }
+        if config:
+            self.config.update(config)
+            
+        # Set seed
+        torch.manual_seed(self.config['seed'])
+        np.random.seed(self.config['seed'])
+
+        # Architecture mapping
+        arch_dims = {
+            'trm_7m': 1024,
+            'trm_14m': 2048
+        }
+        self.model_dim = arch_dims.get(self.config['arch'], self.config['model_dim'])
+        
         # Initialize components
-        self.model_dim = model_dim
         self.memory = LighthouseMemory()
-        self.controller = VegaMiniTransformer(dim=model_dim)
+        self.controller = VegaMiniTransformer(dim=self.model_dim)
         self.flow_solver = FlowSolver()
-        self.quality_model = QualityModel(z_dim=model_dim)
+        self.quality_model = QualityModel(z_dim=self.model_dim)
         # Training state
         self.step_count = 0
         self.quality_data = []  # Store training data for quality model
@@ -55,12 +78,12 @@ class VegaMiniRunner:
         x_embed = self.embed_text(x_text, dim=self.model_dim)
 
         # Get live anchors
-        anchors = self.memory.get_live_anchors(task_id, top_k=64)
+        anchors = self.memory.get_live_anchors(task_id, top_k=self.config['drop_k'])
 
         # Swarm: generate candidates
         y_candidates = []
         z_trajectories = []
-        swarm_size = min(32, max(4, len(anchors) // 2))
+        swarm_size = self.config['swarm_size']
 
         for worker_id in range(swarm_size):
             z0 = torch.randn(self.model_dim)
@@ -90,15 +113,17 @@ class VegaMiniRunner:
             "quality": quality_score,
             "stv_margin": stv_margin,
             "swarm_size": swarm_size,
-            "anchor_count": len(anchors)
+            "anchor_count": len(anchors),
+            "cell_id": self.config.get('cell_id', 'none'),
+            "iteration": self.config.get('iteration', 0)
         })
         
         # Write lighthouses if quality is high
-        if quality_score > 0.8:
+        if quality_score > self.config['quality_gate']:
             self.write_lighthouses(z_winner, y_winner, x_text, task_id, quality_score)
         
         # Reinforce nearby anchors
-        if quality_score > 0.65:
+        if quality_score > (self.config['quality_gate'] - 0.15):
             self.memory.reinforce_nearby(z_winner, delta_b=0.1 * quality_score)
             
         # Visualization (periodically or if requested)
@@ -168,7 +193,8 @@ class VegaMiniRunner:
             b=1.0,
             q=quality,
             y_context=str(y_answer)[:32], # Use a snippet/hash of y_answer
-            task_id=task_id
+            task_id=task_id,
+            cell_id=self.config.get('cell_id', 'none')
         )
         print(f"Dropped lighthouse {lighthouse_id} with quality {quality:.3f}")
         
@@ -180,6 +206,7 @@ class VegaMiniRunner:
 
 def main():
     parser = argparse.ArgumentParser(description="VegaMini Day Loop")
+    parser.add_argument("--config", help="Path to config JSON")
     parser.add_argument("--task", default="arc", help="Task identifier")
     parser.add_argument("--file", help="Input file path")
     parser.add_argument("--query", help="Single query to process")
@@ -187,8 +214,13 @@ def main():
     
     args = parser.parse_args()
     
+    config = {}
+    if args.config:
+        with open(args.config) as f:
+            config = json.load(f)
+    
     # Initialize runner
-    runner = VegaMiniRunner()
+    runner = VegaMiniRunner(config=config)
     
     if args.interactive:
         print("VegaMini Interactive Mode")
@@ -256,6 +288,8 @@ def main():
                     
             except Exception as e:
                 print(f"Error processing query: {e}")
+                import traceback
+                traceback.print_exc()
                 continue
     else:
         print("Please provide --query, --file, or --interactive")
